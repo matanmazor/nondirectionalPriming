@@ -36,6 +36,7 @@ function [resultsTable] = analyzePriming(params,file)
 
             exp_data = data(strcmp(data.Exp,exp_names{i_e}),:);
             exp_ss = unique(exp_data.subNum);
+            exp_var = nan(max(exp_ss),1);
 
             for i_s = exp_ss'
 
@@ -85,6 +86,9 @@ function [resultsTable] = analyzePriming(params,file)
             y_str = string(y_str);    
             x = subj_data.x(ord_y);
             y = strcmp(y_str,y_str{1});
+            
+            % calculate within subject variaibility
+            exp_var(i_s) = mean([nanvar(x(y==0)) nanvar(x(y==1))]);
 
             k = min(sum(y==0),sum(y==1));
 
@@ -129,6 +133,11 @@ function [resultsTable] = analyzePriming(params,file)
             end
 
         end
+        
+        % save within, between variability and the ratio between/within 
+        resultsTable.BTW_Var = nanvar(exp_diff);
+        resultsTable.WITHIN_Var = nanmean(exp_var);
+        resultsTable.Var_Ratio = resultsTable.BTW_Var / resultsTable.WITHIN_Var;
         
         if params.plot
             fig=figure;
