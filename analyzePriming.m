@@ -1,9 +1,15 @@
-function [resultsTable] = analyzePriming(params,filename)
+function [resultsTable] = analyzePriming(params,file)
+
     resultsTable = table;
     rng(params.rng)
     
+    if istable(file)
+        data = file;
+    else
     % load full dataset
-    data = readtable(fullfile('data',[filename,'.csv']));
+        data = readtable(fullfile('data',[file,'.csv']));
+    end
+    
     data.subNum = double(categorical(data.subNum)); %make it a number
     % if filtering is needed, filter subjects according to its output
     if isfield(params,'filterFunc')
@@ -50,11 +56,11 @@ function [resultsTable] = analyzePriming(params,filename)
     % MAIN LOOP
     for i_e=1:length(exp_names)
 
-        exp = exp_names{i_e}
+        exp = exp_names{i_e};
 
         exp_data = data(strcmp(data.Exp,exp),:);
         exp_ss = unique(exp_data.subNum);
-        exp_var = nan(max(exp_ss),1);
+
         if params.SVM
             exp_acc = nan(max(exp_ss),1);
             exp_shuffled_acc = nan(max(exp_ss),params.N_perm);
@@ -72,19 +78,16 @@ function [resultsTable] = analyzePriming(params,filename)
 
         for i_s = exp_ss'
 
-            find(exp_ss==i_s)/length(exp_ss)
+%             find(exp_ss==i_s)/length(exp_ss)
 
             subj_data = exp_data(exp_data.subNum==i_s,:);
-            
             [y_str, ord_y] = sort(subj_data.(params.predict));
             y_str = string(y_str);    
             x = subj_data.x(ord_y);
             y = strcmp(y_str,y_str{1});
 
-            % calculate within subject variaibility
-            exp_var(i_s) = mean([nanvar(x(y==0)) nanvar(x(y==1))]);
-            
             k = min(sum(y==0),sum(y==1));
+
             if params.SVM & k>=10
 
                 SVMModel = fitcsvm(x,y,'Standardize',true,'ClassNames',[0,1]);
@@ -120,19 +123,14 @@ function [resultsTable] = analyzePriming(params,filename)
                     exp_shuffled_consistency(i_s,i_p)=getSignConsistency(shuffled_x,y,params.N_splits,params.statistic);
                 end
 
-                if params.directional
-                    exp_shuffled_diff(i_s,i_p)=params.statistic(shuffled_x(y==0))-params.statistic(shuffled_x(y==1));
-                end
+%                 if params.directional
+%                     exp_shuffled_diff(i_s,i_p)=params.statistic(shuffled_x(y==0))-params.statistic(shuffled_x(y==1));
+%                 end
             end
 
         end
-        % save within, between variability and the ratio between/within 
-        resultsTable.BTW_Var = nanvar(exp_diff);
-        resultsTable.WITHIN_Var = nanmean(exp_var);
-        resultsTable.Var_Ratio = resultsTable.BTW_Var / resultsTable.WITHIN_Var;
-        if params.plot == false
-            fig= figure('visible','off');
-        else
+        
+        if params.plot
             fig=figure;
         end
         if params.SVM
@@ -150,14 +148,15 @@ function [resultsTable] = analyzePriming(params,filename)
             acc_p = mean(SVM_null_distribution>=nanmean(exp_acc));
             resultsTable.SVM_exp_mean = nanmean(exp_acc);
             resultsTable.SVM_p = acc_p;
-            
-            subplot(2,2,1)
-            hold on;
-            histogram(SVM_null_distribution,'Normalization','probability','DisplayStyle','stairs');
-            xline(nanmean(exp_acc),'LineWidth',1);
-            xlabel('cross validated classification accuracy');
-            ylabel('probability')
-            title(sprintf('%s: p=%.3f','SVM accuracy',acc_p))
+            if params.plot
+                subplot(2,2,1)
+                hold on;
+                histogram(SVM_null_distribution,'Normalization','probability','DisplayStyle','stairs');
+                xline(nanmean(exp_acc),'LineWidth',1);
+                xlabel('cross validated classification accuracy');
+                ylabel('probability')
+                title(sprintf('%s: p=%.3f','SVM accuracy',acc_p))
+            end
         end
 
         if params.signConsistency
@@ -175,13 +174,16 @@ function [resultsTable] = analyzePriming(params,filename)
             consistency_p = mean(consistency_null_distribution>=nanmean(exp_consistency));
             resultsTable.consistency_exp_mean = nanmean(exp_consistency);
             resultsTable.consistency_p = consistency_p;
-            subplot(2,2,2)
-            hold on;
-            histogram(consistency_null_distribution,'Normalization','probability','DisplayStyle','stairs');
-            xline(nanmean(exp_consistency),'LineWidth',1);
-            xlabel('mean sign consistency');
-            ylabel('probability')
-            title(sprintf('%s: p=%.3f','Sign consistency',consistency_p))
+            
+            if params.plot
+                subplot(2,2,2)
+                hold on;
+                histogram(consistency_null_distribution,'Normalization','probability','DisplayStyle','stairs');
+                xline(nanmean(exp_consistency),'LineWidth',1);
+                xlabel('mean sign consistency');
+                ylabel('probability')
+                title(sprintf('%s: p=%.3f','Sign consistency',consistency_p))
+            end
         end
 
         if params.directional
@@ -191,21 +193,26 @@ function [resultsTable] = analyzePriming(params,filename)
             for i_p = 1:params.N_null
                 sample = [];
                 for i_s = exp_ss'
-                    sample(end+1)=exp_shuffled_diff(i_s,randperm(params.N_perm,1));
+%                     sample(end+1)=exp_shuffled_diff(i_s,randperm(params.N_perm,1));
+                    sample(end+1)=exp_diff(i_s)*Sample([-1,1]);
                 end
                 diff_null_distribution(end+1)=mean(sample);
             end
 
             diff_p = mean(diff_null_distribution>=nanmean(exp_diff));
+            diff_p=min(diff_p,1-diff_p)*2;
             resultsTable.directional_exp_mean = nanmean(exp_diff);
             resultsTable.directional_p = diff_p;
-            subplot(2,2,3)
-            hold on;
-            histogram(diff_null_distribution,'Normalization','probability','DisplayStyle','stairs');
-            xline(nanmean(exp_diff),'LineWidth',1);
-            xlabel('mean difference');
-            ylabel('probability')
-            title(sprintf('%s: p=%.3f','Directional test',diff_p))
+            
+            if params.plot
+                subplot(2,2,3)
+                hold on;
+                histogram(diff_null_distribution,'Normalization','probability','DisplayStyle','stairs');
+                xline(nanmean(exp_diff),'LineWidth',1);
+                xlabel('mean difference');
+                ylabel('probability')
+                title(sprintf('%s: p=%.3f','Directional test',diff_p))
+            end
         end
 
     %     s=hgexport('readstyle','presentation');
@@ -215,32 +222,34 @@ function [resultsTable] = analyzePriming(params,filename)
         s.Height = 8;
 
         % save
-        dir_name = fullfile('.','analyzed',filename,exp_names{i_e},params.x);
-        if length(params.filter_column)>0
-            dir_name = fullfile(dir_name,['filtering_by_',params.filter_column]);
-        end
-        if length(params.control_for)>0
-            dir_name = fullfile(dir_name,['controlling_for_',params.control_for]);
-        end
+        
+        if params.save
+            dir_name = fullfile('.','analyzed',filename,exp_names{i_e},params.x);
+            if length(params.filter_column)>0
+                dir_name = fullfile(dir_name,['filtering_by_',params.filter_column]);
+            end
+            if length(params.control_for)>0
+                dir_name = fullfile(dir_name,['controlling_for_',params.control_for]);
+            end
 
-        if ~isdir(dir_name)
-            mkdir(dir_name)
-        end
+            if ~isdir(dir_name)
+                mkdir(dir_name)
+            end
 
-        save(fullfile(dir_name,'params'),'params');
-        if params.SVM
-            save(fullfile(dir_name,'SVM_results'),'exp_acc','exp_shuffled_acc','SVM_null_distribution','acc_p');
-        end
+            save(fullfile(dir_name,'params'),'params');
+            if params.SVM
+                save(fullfile(dir_name,'SVM_results'),'exp_acc','exp_shuffled_acc','SVM_null_distribution','acc_p');
+            end
 
-        if params.signConsistency
-             save(fullfile(dir_name,'consistency_results'),'exp_consistency','exp_shuffled_consistency','consistency_null_distribution','consistency_p');
-        end
+            if params.signConsistency
+                 save(fullfile(dir_name,'consistency_results'),'exp_consistency','exp_shuffled_consistency','consistency_null_distribution','consistency_p');
+            end
 
-        if params.directional
-             save(fullfile(dir_name,'directional_results'),'exp_diff','exp_shuffled_diff','diff_null_distribution','diff_p');
-        end
+            if params.directional
+                 save(fullfile(dir_name,'directional_results'),'exp_diff','exp_shuffled_diff','diff_null_distribution','diff_p');
+            end
 
-        hgexport(fig,fullfile(dir_name,'summary_figure.png'),s);
+            hgexport(fig,fullfile(dir_name,'summary_figure.png'),s);
+        end
     end
 end
-
