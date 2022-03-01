@@ -9,7 +9,7 @@
 #' @param id An identifier of a specific participant.
 #' @param dv The depedent variable to apply the summary function (summary_function) to.
 #' @param iv Labels of an independent variable, indicating the different levels under which the dependent variable (dv) is expected to differ.
-#' @param summary_function The summary function applied to the dependent variable (dv) under each level of the indepdent variable (iv) for each participant (id).
+#' @param summary_function The summary function applied to the dependent variable (dv) under each level of the independent variable (iv) for each participant (id).
 #' @param repetitions The number of repetitions used to estimate sign consistency probability.
 #' @return A list including the results of the function
 #' \itemize{
@@ -33,14 +33,15 @@ get_sign_consistency <- function(data, idv = 'id',dv = 'rt', iv = 'condition',re
 #' @param id An identifier of a specific participant.
 #' @param dv The depedent variable to apply the summary function (summary_function) to.
 #' @param iv Labels of an independent variable, indicating the different levels under which the dependent variable (dv) is expected to differ.
-#' @param summary_function The summary function applied  to the dependent variable (dv) under each level of the indepdent variable (iv) for each identifier (id).
+#' @param summary_function The summary function applied  to the dependent variable (dv) under each level of the independent variable (iv) for each identifier (id).
 #' @param repetitions The number of repetitions used to estimate the probability of sign consistency.
 #' @param perm_repetitions The number of label shuffling for each participant.
 #' @param null_dist_samples The number of samples taken from the null distribution.
 #' @return A list including the results of the function
 #' \itemize{
-#'   \item p - The p_value of the estimated sign consistency under the distribution of sign consistency probabilities under the bootsrapped null distribution.
-#'   \item null_dist - A numerical vector of samples of sign consistency under the assumption that there is no consistent difference in the depedent variable (dv) between the levels of the indepdent variable (iv).
+#'   \item p - The p_value of the estimated sign consistency under the distribution of sign consistency probabilities under the bootstrappednull distribution.
+#'   \item statistic - The group-level statstic describing the mean sign consistency across participants.
+#'   \item null_dist - A numerical vector of samples of sign consistency under the assumption that there is no consistent difference in the depedent variable (dv) between the levels of the independent variable (iv).
 #' }
 #' @seealso [PACKAGE_NAME::get_sign_consistency()] which returns the probability of a consistent sign of a difference score for a random split of the data
 #' @export
@@ -51,8 +52,8 @@ test_sign_consistency <- function(data, idv = 'id',dv = 'rt', iv = 'condition', 
 #' The function returns the mean classification accuracy of condition labels according to a dependent variable of each participant's data.
 #'
 #' The function accepts a dataset in long format with specific columns: identifier (id), independent and dependent variables (iv and dv, respectively).
-#' For each paricipant, the function calcualtes the k-fold cross-validated accuracy of a classifier trained to predict the labels of levels under the independent variable (iv) based on the depdent variable (dv).
-#' Then, it returns the mean accuracy of individual paricipants' classifiers.
+#' For each paricipant, the function calcualtes the k-fold cross-validated accuracy of a classifier trained to predict the labels of levels under the independent variable (iv) based on the dependent variable (dv).
+#' Then, it returns the mean accuracy of individual paricipants classifiers.
 #' All levels of the independent variable must be included under each identifier.
 #'
 #' @param data The dataset to analyze
@@ -60,7 +61,7 @@ test_sign_consistency <- function(data, idv = 'id',dv = 'rt', iv = 'condition', 
 #' @param dv The depedent variable to apply the summary function (summary_function) to.
 #' @param iv Labels of an independent variable, indicating the different levels under which the dependent variable (dv) is expected to differ.
 #' @param k The number of folds to use when splitting the data of each participant to train and test datasets. The default value (NA), will result in using the maximal number of folds possible (k equals the frequency of the less frequent label).
-#' @param classifier - The classifier to train. The default value (NA) will result in creating a SVM classifier with linear kernel.
+#' @param classifier The classifier to train. The default value (NA) will result in creating a SVM classifier with linear kernel.
 #' @return A list including the results of the function
 #' \itemize{
 #'   \item accuracy - The mean classification accuracy across paricipants and folds.
@@ -73,10 +74,10 @@ get_condition_classification <- function(data, idv = 'id',dv = 'rt', iv = 'condi
 }
 
 
-#' The function tests for a significant mean classification accuracy of condition labels according to a dependent variable across participants (without assuming a directional effect), using bootsrapping and permutating each participants' independent variable labels.
+#' The function tests for a significant mean classification accuracy of condition labels according to a dependent variable across participants (without assuming a directional effect), using bootstrapping and permutating each participants' independent variable labels.
 #'
 #' The function accepts a dataset in long format with specific columns: identifier (id), independent and dependent variables (iv and dv, respectively).
-#' For each paricipant, the function calcualtes the k-fold cross-validated accuracy of a classifier trained to predict the labels of levels under the independent variable (iv) based on the depdent variable (dv).
+#' For each paricipant, the function calcualtes the k-fold cross-validated accuracy of a classifier trained to predict the labels of levels under the independent variable (iv) based on the dependent variable (dv).
 #' Then, the mean classification accuracy across participants is tested against a bootstrapped null distribution in which classification accuracy is calculated for each participant after shuffling its independent variable labels(see Stelzer, J., Chen, Y., & Turner, R. (2013)).
 #' All levels of the independent variable must be included under each identifier.
 #'
@@ -85,14 +86,15 @@ get_condition_classification <- function(data, idv = 'id',dv = 'rt', iv = 'condi
 #' @param dv The depedent variable to apply the summary function (summary_function) to.
 #' @param iv Labels of an independent variable, indicating the different levels under which the dependent variable (dv) is expected to differ.
 #' @param k The number of folds to use when splitting the data of each participant to train and test datasets. The default value (NA), will result in using the maximal number of folds possible (k equals the frequency of the rare label).
-#' @param classifier - The classifier to train. The default value (NA) will result in creating a SVM classifier with linear kernel.
+#' @param classifier The classifier to train. The default value (NA) will result in creating a SVM classifier with linear kernel.
 #' @return A list including the results of the function
 #' @param perm_repetitions The number of label shuffling for each participant.
 #' @param null_dist_samples The number of samples taken from the null distribution.
 #' @return A list including the results of the function
 #' \itemize{
-#'   \item p - The p_value of the mean classification accuracy across subjects, under the bootsrapped null distribution.
-#'   \item null_dist - A numerical vector of samples of the classifier accuracies under the bootsrapped null distribution.
+#'   \item p - The p_value of the mean classification accuracy across participants, under the bootstrappednull distribution.
+#'   \item statistic - The group-level statstic describing the mean classification accuracy across participants.
+#'   \item null_dist - A numerical vector of samples of the classifier accuracies under the bootstrappednull distribution.
 #' }
 #' @seealso [PACKAGE_NAME::get_condition_classification()] which returns the probability of a consistent sign of a difference score for a random split of the data
 #' @export
